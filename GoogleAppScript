@@ -1,0 +1,52 @@
+/**
+ * Automatically looks up Airport Latitude and Longitude.
+ * Assumes Airport ID is in Column A, outputs Lat to B and Long to C.
+ */
+function lookupAirportCoordinates() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  
+  // Get all data in the sheet starting from row 2 (skipping headers)
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return; // Exit if sheet is empty
+  
+  var range = sheet.getRange(2, 1, lastRow - 1, 1); // Column A (Airports)
+  var values = range.getValues();
+  
+  var results = [];
+  
+  for (var i = 0; i < values.length; i++) {
+    var airportQuery = values[i][0];
+    var lat = "";
+    var lng = "";
+    
+    if (airportQuery != "") {
+      try {
+        // Use Google's Geocoder to find the location
+        var response = Maps.newGeocoder().geocode(airportQuery);
+        
+        if (response.status == 'OK' && response.results.length > 0) {
+          var location = response.results[0].geometry.location;
+          lat = location.lat;
+          lng = location.lng;
+        }
+      } catch (e) {
+        Logger.log("Error finding " + airportQuery + ": " + e.message);
+      }
+    }
+    results.push([lat, lng]);
+  }
+  
+  // Write the results to Columns B and C in one batch (starting at Row 2)
+  sheet.getRange(2, 2, results.length, 2).setValues(results);
+}
+
+/**
+ * Optional: Adds a custom menu to your Google Sheet to run the script easily.
+ */
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('✈️ Airport Coordinates')
+      .addItem('Lookup Coordinates', 'lookupAirportCoordinates')
+      .addToUi();
+}
